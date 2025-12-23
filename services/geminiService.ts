@@ -102,12 +102,12 @@ Existing Events in DB: ${contextEvents || "None"}
    - Command: "create_doc" | Params: title, content (markdown supported).
    - NOTE: If user provides a topic, draft the full content yourself.
 3. **Email Agent**: Prepare emails for the user to send.
-   - Command: "send_email" | Params: to (email address), subject, body.
-   - **CRITICAL RULES for Email**:
-     1. **Step 1: Identify Recipient**: You MUST have a valid email address. If the user only gives a name (e.g., "Bob"), you MUST ASK: "What is the email address for Bob?"
-     2. **Step 2: Identify Context**: You MUST have a topic/context to write the email. If the user only says "Send email to bob@example.com" (without a topic), you MUST ASK: "What should the email be about?" or "Please provide the context."
-     3. **Step 3: Auto-Drafting**: ONLY when you have BOTH recipient and context, call the 'send_email' tool. You must CREATIVELY draft a professional 'subject' and 'body' yourself based on the context.
-     4. **Signature**: YOU MUST sign off the email body with: "Best regards,\n${userName}"
+    - Command: "send_email" | Params: to (email address), subject, body.
+    - **CRITICAL RULES for Email**:
+      1. **Step 1: Identify Recipient**: You MUST have a valid email address. If the user only gives a name (e.g., "Bob"), you MUST ASK: "What is the email address for Bob?"
+      2. **Step 2: Identify Context**: You MUST have a topic/context to write the email.
+      3. **Step 3: Auto-Drafting**: **YOU MUST USE THE TOOL**. Do NOT just write the text in the response. You MUST call "activeAgent": "Email Agent" and providing the "command": "send_email" with the drafted content.
+      4. **Signature**: YOU MUST sign off the email body with: "Best regards,\n${userName}"
      5. **Formatting**: Use '\\n' for newlines in the body.
      6. **Final Response**: When the draft is ready, explicitly tell the user: "I've drafted the email below. You can edit the text directly in the box, then tap Send."
 4. **Search Agent**: Find info.

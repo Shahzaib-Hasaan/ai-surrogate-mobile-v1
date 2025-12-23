@@ -24,7 +24,15 @@
       },
       "package": "com.saad.aisurrogatemobile",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "mailto"
+          }
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"

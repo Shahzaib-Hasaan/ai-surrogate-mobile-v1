@@ -20,15 +20,27 @@ const EmailWidget: React.FC<{ data: any }> = ({ data }) => {
     const [body, setBody] = useState(data.body);
     const [isEditing, setIsEditing] = useState(false);
 
-    const handleSend = () => {
-        const bodyContent = body.replace(/\n/g, "\r\n");
-        const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyContent)}`;
-        Linking.openURL(mailto);
+    const handleSend = async () => {
+        try {
+            const bodyContent = body.replace(/\n/g, "\r\n");
+            // Direct openURL call - bypasses Android 11+ package visibility checks
+            // The OS will prompt the user if multiple apps exist, or fail if none.
+            const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyContent)}`;
+            await Linking.openURL(mailto);
+        } catch (error: any) {
+            Alert.alert("Error", `Could not open email client: ${error.message}`);
+        }
     };
 
-    const handleGmail = () => {
-        const gmailLink = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        Linking.openURL(gmailLink);
+    const handleGmail = async () => {
+        try {
+            // Enhanced Gmail Mobile Web Link
+            // /u/0/ ensures default account. 
+            const gmailLink = `https://mail.google.com/mail/u/0/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            await Linking.openURL(gmailLink);
+        } catch (error: any) {
+            Alert.alert("Error", `Could not open Gmail: ${error.message}`);
+        }
     };
 
     return (
@@ -536,40 +548,43 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                 </Pressable>
             </View>
 
-            {/* Messages */}
-            <FlatList
-                ref={flatListRef}
-                data={messages}
-                renderItem={renderMessage}
-                keyExtractor={item => item.id}
-                contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-            />
-
-            {isProcessing && (
-                <View className="px-4 py-2">
-                    <Text className="text-gray-500 text-xs">Typing...</Text>
-                </View>
-            )}
-
-            {attachedImage && (
-                <View className="bg-[#e9e0d5] dark:bg-[#1f2c34] p-2 flex-row justify-center relative border-t border-gray-300 dark:border-gray-700">
-                    <View>
-                        <Image source={{ uri: attachedImage }} className="h-40 w-40 rounded-lg" resizeMode="cover" />
-                        <Pressable onPress={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-gray-700 rounded-full p-1">
-                            <X size={16} color="white" />
-                        </Pressable>
-                    </View>
-                </View>
-            )}
-
-            {/* Input */}
+            {/* Main Content Wrapped in KeyboardAvoidingView */}
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 20}
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
-                <View className="p-2 flex-row items-end gap-2 mb-1">
+                {/* Messages */}
+                <FlatList
+                    ref={flatListRef}
+                    data={messages}
+                    renderItem={renderMessage}
+                    keyExtractor={item => item.id}
+                    contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
+                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                    onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                    className="flex-1"
+                />
+
+                {isProcessing && (
+                    <View className="px-4 py-2">
+                        <Text className="text-gray-500 text-xs">Typing...</Text>
+                    </View>
+                )}
+
+                {attachedImage && (
+                    <View className="bg-[#e9e0d5] dark:bg-[#1f2c34] p-2 flex-row justify-center relative border-t border-gray-300 dark:border-gray-700">
+                        <View>
+                            <Image source={{ uri: attachedImage }} className="h-40 w-40 rounded-lg" resizeMode="cover" />
+                            <Pressable onPress={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-gray-700 rounded-full p-1">
+                                <X size={16} color="white" />
+                            </Pressable>
+                        </View>
+                    </View>
+                )}
+
+                {/* Input */}
+                <View className="p-2 flex-row items-end gap-2 mb-1 bg-[#EFE7DE] dark:bg-[#0b141a]">
                     <View className="flex-1 bg-white dark:bg-[#1f2c34] rounded-3xl flex-row items-center shadow-sm border border-gray-100 dark:border-gray-700 px-1 py-1 min-h-[48px]">
                         <Pressable className="p-2">
                             <Smile size={24} color="#9ca3af" />
