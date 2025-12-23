@@ -8,8 +8,8 @@ export default function TabLayout() {
 
     if (isLoading) {
         return (
-            <View className="flex-1 items-center justify-center bg-[#EFE7DE] dark:bg-[#0b141a]">
-                <ActivityIndicator size="large" color="#075E54" />
+            <View className="flex-1 items-center justify-center bg-[#050511]">
+                <ActivityIndicator size="large" color="#8B5CF6" />
             </View>
         );
     }
@@ -21,11 +21,15 @@ export default function TabLayout() {
             screenOptions={{
                 headerShown: false,
                 tabBarStyle: {
-                    backgroundColor: isDark ? '#1f2c34' : '#ffffff',
-                    borderTopColor: isDark ? '#2a3942' : '#e5e7eb',
+                    backgroundColor: '#050511', // Deep space dark
+                    borderTopColor: 'rgba(255, 255, 255, 0.1)', // Glass border
+                    height: 60,
+                    paddingBottom: 8,
+                    paddingTop: 8,
                 },
-                tabBarActiveTintColor: isDark ? '#00a884' : '#075E54',
-                tabBarInactiveTintColor: isDark ? '#8696a0' : '#9ca3af',
+                tabBarActiveTintColor: '#8B5CF6', // Neon Purple
+                tabBarInactiveTintColor: '#64748b',
+                tabBarShowLabel: true,
             }}
         >
             <Tabs.Screen

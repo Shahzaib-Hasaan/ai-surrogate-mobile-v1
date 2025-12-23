@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { Bot, Mic, Layers, ShieldCheck, ArrowRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BackgroundWrapper from './BackgroundWrapper';
+import GlassCard from './GlassCard';
 
 interface IntroScreenProps {
     onComplete: () => void;
@@ -9,68 +11,70 @@ interface IntroScreenProps {
 
 const IntroScreen: React.FC<IntroScreenProps> = ({ onComplete }) => {
     return (
-        <View className="flex-1 bg-white dark:bg-[#0b141a]">
-            {/* Background decoration */}
-            <View className="absolute top-0 left-0 w-full h-1/2 bg-[#075E54] dark:bg-[#1f2c34] rounded-b-[40px]" />
-
+        <BackgroundWrapper>
             <SafeAreaView className="flex-1 px-6 pt-12 pb-6 justify-between">
 
                 {/* Hero Section */}
-                <View className="items-center mb-8">
-                    <View className="w-24 h-24 bg-white dark:bg-[#1f2c34] rounded-full items-center justify-center shadow-lg mb-6">
-                        <Bot size={48} color="#075E54" />
+                <View className="items-center mb-8 pt-8">
+                    <View className="w-24 h-24 rounded-full items-center justify-center mb-6 border-2 border-neon-primary bg-black/50 shadow-[0_0_20px_rgba(139,92,246,0.5)]">
+                        <Bot size={48} color="#8B5CF6" />
                     </View>
-                    <Text className="text-3xl font-bold text-white text-center mb-2">My Surrogate</Text>
-                    <Text className="text-green-100 text-center text-sm max-w-xs">
-                        Your intelligent digital twin for seamless communication and task automation.
+                    <Text className="text-4xl font-black text-transparent bg-clip-text text-white text-center mb-2">
+                        SURROGATE
+                    </Text>
+                    <Text className="text-neon-secondary text-center text-sm uppercase tracking-widest font-bold max-w-xs">
+                        Neural Digital Twin
                     </Text>
                 </View>
 
                 {/* Features Card */}
-                <View className="bg-white dark:bg-[#1f2c34] rounded-2xl shadow-xl p-6 mb-6 space-y-6 border border-gray-100 dark:border-gray-800">
-                    <View className="flex-row items-start">
-                        <View className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg mr-4">
-                            <Mic size={24} color="#075E54" />
+                <GlassCard className="p-6 mb-6 space-y-6">
+                    <View className="flex-row items-center border-b border-white/5 pb-4">
+                        <View className="bg-neon-primary/20 p-3 rounded-lg mr-4 border border-neon-primary/30">
+                            <Mic size={24} color="#8B5CF6" />
                         </View>
                         <View className="flex-1">
-                            <Text className="font-bold text-gray-800 dark:text-gray-100 text-lg">Multilingual Voice</Text>
-                            <Text className="text-gray-500 dark:text-gray-400 text-sm leading-snug">Speak naturally in English, Urdu, or Punjabi. I understand and respond in your preferred language.</Text>
+                            <Text className="font-bold text-white text-lg">Voice Interface</Text>
+                            <Text className="text-gray-400 text-xs leading-snug">Multi-dialect natural language processing active.</Text>
                         </View>
                     </View>
 
-                    <View className="flex-row items-start">
-                        <View className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg mr-4">
-                            <Layers size={24} color="#2563eb" />
+                    <View className="flex-row items-center border-b border-white/5 pb-4">
+                        <View className="bg-neon-secondary/20 p-3 rounded-lg mr-4 border border-neon-secondary/30">
+                            <Layers size={24} color="#06b6d4" />
                         </View>
                         <View className="flex-1">
-                            <Text className="font-bold text-gray-800 dark:text-gray-100 text-lg">Smart Agents</Text>
-                            <Text className="text-gray-500 dark:text-gray-400 text-sm leading-snug">I automatically route requests to specialized agents for Scheduling, Documents, or Web Search.</Text>
+                            <Text className="font-bold text-white text-lg">Autonomous Agents</Text>
+                            <Text className="text-gray-400 text-xs leading-snug">Auto-routing to scheduling, documentation, & web search modules.</Text>
                         </View>
                     </View>
 
-                    <View className="flex-row items-start">
-                        <View className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-lg mr-4">
-                            <ShieldCheck size={24} color="#ea580c" />
+                    <View className="flex-row items-center">
+                        <View className="bg-neon-accent/20 p-3 rounded-lg mr-4 border border-neon-accent/30">
+                            <ShieldCheck size={24} color="#EC4899" />
                         </View>
                         <View className="flex-1">
-                            <Text className="font-bold text-gray-800 dark:text-gray-100 text-lg">Local & Secure</Text>
-                            <Text className="text-gray-500 dark:text-gray-400 text-sm leading-snug">Your chats and settings are stored locally on your device for maximum privacy.</Text>
+                            <Text className="font-bold text-white text-lg">Secure Core</Text>
+                            <Text className="text-gray-400 text-xs leading-snug">Local-first encrypted architectural storage.</Text>
                         </View>
                     </View>
-                </View>
+                </GlassCard>
 
                 {/* Action Button */}
-                <Pressable
-                    onPress={onComplete}
-                    className="w-full bg-[#075E54] dark:bg-[#00a884] py-4 rounded-xl shadow-lg flex-row items-center justify-center active:opacity-90"
-                >
-                    <Text className="text-white font-bold text-lg">Get Started</Text>
-                    <ArrowRight size={20} color="white" style={{ marginLeft: 8 }} />
-                </Pressable>
+                <View>
+                    <Pressable
+                        onPress={onComplete}
+                        className="w-full bg-neon-primary py-4 rounded-xl shadow-lg flex-row items-center justify-center active:scale-95 border border-white/20"
+                        style={{ shadowColor: '#8B5CF6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 15 }}
+                    >
+                        <Text className="text-white font-black text-lg uppercase tracking-wider">Initialize</Text>
+                        <ArrowRight size={20} color="white" style={{ marginLeft: 8 }} />
+                    </Pressable>
+                    <Text className="text-center text-[10px] text-gray-500 mt-4 uppercase tracking-[0.2em]">Powered by Gemini 2.0 Flash</Text>
+                </View>
 
-                <Text className="text-center text-xs text-gray-400 dark:text-gray-600 mt-4">Powered by Gemini 2.0 Flash</Text>
             </SafeAreaView>
-        </View>
+        </BackgroundWrapper>
     );
 };
 

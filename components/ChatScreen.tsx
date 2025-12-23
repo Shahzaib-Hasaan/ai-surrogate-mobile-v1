@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, FlatList, Image, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Linking, ScrollView } from 'react-native';
-import { Send, Mic, MicOff, MoreVertical, Paperclip, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Send, Mic, MicOff, MoreVertical, Paperclip, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown, Camera } from 'lucide-react-native';
 import { Message, Sender, AgentType, ChatSession } from '../types';
 import { generateSurrogateResponse } from '../services/geminiService';
 import { db } from '../services/db';
@@ -8,12 +8,14 @@ import * as Speech from 'expo-speech';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import BackgroundWrapper from './BackgroundWrapper';
+import GlassCard from './GlassCard';
 
 interface ChatScreenProps {
     sessionId: string;
 }
 
-// --- Sub-Component: Editable Email Widget ---
+// --- Sub-Component: Editable Email Widget (Styled) ---
 const EmailWidget: React.FC<{ data: any }> = ({ data }) => {
     const [to, setTo] = useState(data.to);
     const [subject, setSubject] = useState(data.subject);
@@ -23,8 +25,6 @@ const EmailWidget: React.FC<{ data: any }> = ({ data }) => {
     const handleSend = async () => {
         try {
             const bodyContent = body.replace(/\n/g, "\r\n");
-            // Direct openURL call - bypasses Android 11+ package visibility checks
-            // The OS will prompt the user if multiple apps exist, or fail if none.
             const mailto = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyContent)}`;
             await Linking.openURL(mailto);
         } catch (error: any) {
@@ -34,8 +34,6 @@ const EmailWidget: React.FC<{ data: any }> = ({ data }) => {
 
     const handleGmail = async () => {
         try {
-            // Enhanced Gmail Mobile Web Link
-            // /u/0/ ensures default account. 
             const gmailLink = `https://mail.google.com/mail/u/0/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             await Linking.openURL(gmailLink);
         } catch (error: any) {
@@ -44,49 +42,51 @@ const EmailWidget: React.FC<{ data: any }> = ({ data }) => {
     };
 
     return (
-        <View className="mt-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 rounded-lg p-3 w-full">
-            <View className="flex-row items-center justify-between mb-2 border-b border-red-100 dark:border-red-800/50 pb-2">
+        <GlassCard className="mt-2 w-full !mb-0 border-neon-accent/30 !bg-neon-accent/5">
+            <View className="flex-row items-center justify-between mb-2 border-b border-neon-accent/20 pb-2 p-3">
                 <View className="flex-row items-center gap-2">
-                    <View className="bg-red-100 dark:bg-red-800 p-1 rounded">
-                        <Mail size={14} color="#dc2626" />
+                    <View className="bg-neon-accent/20 p-1 rounded">
+                        <Mail size={14} color="#EC4899" />
                     </View>
-                    <Text className="text-xs font-bold text-red-800 dark:text-red-200">Draft Ready</Text>
+                    <Text className="text-xs font-bold text-neon-accent">Neural Draft</Text>
                 </View>
                 <Pressable
                     onPress={() => setIsEditing(!isEditing)}
-                    className="flex-row items-center gap-1"
+                    className="flex-row items-center gap-1 bg-black/40 px-2 py-1 rounded"
                 >
-                    {isEditing ? <Check size={12} color="#dc2626" /> : <Edit2 size={12} color="#dc2626" />}
-                    <Text className="text-xs text-red-600 dark:text-red-400">{isEditing ? "Done" : "Edit"}</Text>
+                    {isEditing ? <Check size={12} color="#EC4899" /> : <Edit2 size={12} color="#EC4899" />}
+                    <Text className="text-xs text-neon-accent font-bold">{isEditing ? "Done" : "Edit"}</Text>
                 </Pressable>
             </View>
 
-            <View className="space-y-2">
+            <View className="space-y-2 p-3 pt-0">
                 {/* TO FIELD */}
                 <View className="flex-row items-center gap-1">
-                    <Text className="font-semibold w-12 text-gray-500 dark:text-gray-400 text-xs">To:</Text>
+                    <Text className="font-bold w-12 text-gray-400 text-xs uppercase">Target:</Text>
                     {isEditing ? (
                         <TextInput
                             value={to}
                             onChangeText={setTo}
-                            className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-800 dark:text-gray-200 text-xs"
+                            className="flex-1 bg-black/50 border border-white/10 rounded px-2 py-1 text-white text-xs"
+                            placeholderTextColor="#555"
                         />
                     ) : (
-                        <Text className="text-gray-800 dark:text-gray-200 bg-white dark:bg-gray-900/50 px-2 py-0.5 rounded border border-gray-100 dark:border-gray-800 text-xs flex-1">{to}</Text>
+                        <Text className="text-white bg-white/5 px-2 py-0.5 rounded border border-white/5 text-xs flex-1">{to}</Text>
                     )}
                 </View>
 
                 {/* SUBJECT FIELD */}
                 <View className="flex-row items-center gap-1">
-                    <Text className="font-semibold w-12 text-gray-500 dark:text-gray-400 text-xs">Subject:</Text>
+                    <Text className="font-bold w-12 text-gray-400 text-xs uppercase">Header:</Text>
                     {isEditing ? (
                         <TextInput
                             value={subject}
                             onChangeText={setSubject}
-                            className="flex-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-800 dark:text-gray-200 text-xs"
+                            className="flex-1 bg-black/50 border border-white/10 rounded px-2 py-1 text-white text-xs"
+                            placeholderTextColor="#555"
                         />
                     ) : (
-                        <Text className="text-gray-800 dark:text-gray-200 font-medium text-xs flex-1">{subject}</Text>
+                        <Text className="text-white font-medium text-xs flex-1">{subject}</Text>
                     )}
                 </View>
 
@@ -98,11 +98,12 @@ const EmailWidget: React.FC<{ data: any }> = ({ data }) => {
                             onChangeText={setBody}
                             multiline
                             numberOfLines={8}
-                            className="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded p-2 text-xs text-gray-800 dark:text-gray-200 font-mono h-32"
+                            className="w-full bg-black/50 border border-white/10 rounded p-2 text-xs text-white font-mono h-32"
                             textAlignVertical="top"
+                            placeholderTextColor="#555"
                         />
                     ) : (
-                        <Text className="text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-900/50 p-2 rounded border border-red-50 dark:border-red-900/30 font-sans">
+                        <Text className="text-xs text-gray-300 bg-white/5 p-2 rounded border border-white/5 font-mono">
                             {body}
                         </Text>
                     )}
@@ -110,23 +111,17 @@ const EmailWidget: React.FC<{ data: any }> = ({ data }) => {
 
                 {/* Action Buttons */}
                 <View className="pt-2 mt-1 flex-row gap-2 justify-end">
-                    <Pressable
-                        onPress={handleGmail}
-                        className="bg-white dark:bg-gray-700 border border-red-200 dark:border-gray-600 py-2 px-3 rounded-lg flex-row items-center shadow-sm"
-                    >
-                        <Mail size={12} color="#dc2626" style={{ marginRight: 8 }} />
-                        <Text className="text-red-600 dark:text-red-400 text-xs font-bold">Gmail Web</Text>
+                    <Pressable onPress={handleGmail} className="bg-white/5 border border-white/10 py-2 px-3 rounded-lg flex-row items-center active:bg-white/10">
+                        <Mail size={12} color="#9ca3af" style={{ marginRight: 8 }} />
+                        <Text className="text-gray-300 text-xs font-bold">Gmail Protocol</Text>
                     </Pressable>
-                    <Pressable
-                        onPress={handleSend}
-                        className="bg-red-600 py-2 px-4 rounded-lg flex-row items-center shadow-sm"
-                    >
-                        <Send size={12} color="white" style={{ marginRight: 8 }} />
-                        <Text className="text-white text-xs font-bold">{isEditing ? "Send Edited" : "Send Email"}</Text>
+                    <Pressable onPress={handleSend} className="bg-neon-accent/20 border border-neon-accent/50 py-2 px-4 rounded-lg flex-row items-center active:bg-neon-accent/30">
+                        <Send size={12} color="#EC4899" style={{ marginRight: 8 }} />
+                        <Text className="text-neon-accent text-xs font-bold">{isEditing ? "Commit Changes" : "Execute Send"}</Text>
                     </Pressable>
                 </View>
             </View>
-        </View>
+        </GlassCard>
     );
 };
 
@@ -246,9 +241,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
     }
 
     const handleClearChat = async () => {
-        Alert.alert("Clear Chat", "Are you sure?", [
+        Alert.alert("Purge Logs", "Permanently delete this neural thread?", [
             { text: "Cancel", style: "cancel" },
-            { text: "Clear", style: "destructive", onPress: () => setMessages([]) }
+            { text: "Purge", style: "destructive", onPress: () => setMessages([]) }
         ]);
     };
 
@@ -292,21 +287,21 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
             const isUp = report.change >= 0;
 
             return (
-                <View className="mt-2 bg-[#1e1e1e] border border-gray-800 rounded-xl overflow-hidden shadow-lg w-full">
+                <GlassCard className="mt-2 w-full !mb-0 !bg-black/40 border-green-500/30">
                     <View className={`h-1 w-full ${isUp ? 'bg-green-500' : 'bg-red-500'}`} />
                     <View className="p-4">
                         <View className="flex-row justify-between items-start mb-1">
                             <View>
                                 <View className="flex-row items-center gap-2">
-                                    <Text className="text-lg font-bold text-white">{report.symbol}</Text>
-                                    <View className="bg-gray-800 px-1.5 py-0.5 rounded border border-gray-700">
+                                    <Text className="text-lg font-black text-white">{report.symbol}</Text>
+                                    <View className="bg-white/10 px-1.5 py-0.5 rounded border border-white/10">
                                         <Text className="text-[10px] font-bold text-gray-400">{report.currency}</Text>
                                     </View>
                                 </View>
                                 <Text className="text-[10px] text-gray-400 mt-0.5">{report.marketCap} MKT CAP</Text>
                             </View>
                             <View className="items-end">
-                                <Text className={`text-2xl font-bold ${isUp ? 'text-green-400' : 'text-red-400'}`}>
+                                <Text className={`text-2xl font-black ${isUp ? 'text-green-400' : 'text-red-400'}`}>
                                     {report.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </Text>
                                 <View className="flex-row items-center">
@@ -317,91 +312,66 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                                 </View>
                             </View>
                         </View>
-
-                        <View className="flex-row items-center justify-between pt-3 border-t border-gray-800 mt-2">
-                            <View className="items-center">
-                                <Text className="text-[9px] text-gray-500 uppercase">P/E Ratio</Text>
-                                <Text className="text-xs font-semibold text-gray-300">{report.peRatio || '-'}</Text>
-                            </View>
-                            <View className="items-center">
-                                <Text className="text-[9px] text-gray-500 uppercase">Analysis</Text>
-                                <View className={`px-2 py-0.5 rounded ${report.recommendation === 'BUY' ? 'bg-green-900/40' :
-                                    report.recommendation === 'SELL' ? 'bg-red-900/40' :
-                                        'bg-yellow-900/40'
-                                    }`}>
-                                    <Text className={`text-xs font-bold ${report.recommendation === 'BUY' ? 'text-green-400' :
-                                        report.recommendation === 'SELL' ? 'text-red-400' :
-                                            'text-yellow-400'
-                                        }`}>{report.recommendation}</Text>
-                                </View>
-                            </View>
-                        </View>
                     </View>
-                </View>
+                </GlassCard>
             );
         }
 
         if (msg.payloadType === 'EVENT') {
             const events = Array.isArray(msg.payload) ? msg.payload : [msg.payload];
             return (
-                <View className="mt-2 space-y-2">
+                <View className="mt-2 space-y-2 w-full">
                     {events.map((evt: any, idx: number) => {
                         if (evt.status === 'cancelled') {
                             return (
-                                <View key={idx} className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 opacity-60">
+                                <View key={idx} className="bg-white/5 border border-white/10 rounded-lg p-3 opacity-60">
                                     <View className="flex-row items-center">
                                         <X size={16} color="#6b7280" style={{ marginRight: 8 }} />
-                                        <Text className="text-xs font-bold text-gray-500 dark:text-gray-400 line-through">{evt.title} (Cancelled)</Text>
+                                        <Text className="text-xs font-bold text-gray-500 line-through">{evt.title} (Cancelled)</Text>
                                     </View>
                                 </View>
                             );
                         }
 
                         return (
-                            <View key={idx} className="bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800 rounded-lg p-3">
-                                <View className="flex-row items-start">
-                                    <View className="bg-purple-100 dark:bg-purple-800 p-2 rounded mr-3">
-                                        <Calendar size={20} color="#9333ea" />
+                            <GlassCard key={idx} className="!mb-0 !bg-neon-primary/5 border-neon-primary/20">
+                                <View className="p-3 flex-row items-start">
+                                    <View className="bg-neon-primary/20 p-2 rounded mr-3">
+                                        <Calendar size={20} color="#8B5CF6" />
                                     </View>
                                     <View className="flex-1">
-                                        <Text className="font-bold text-purple-900 dark:text-purple-200 text-sm" numberOfLines={1}>{evt.title}</Text>
+                                        <Text className="font-bold text-white text-sm" numberOfLines={1}>{evt.title}</Text>
                                         <View className="flex-row items-center mt-1">
-                                            <Clock size={12} color="#7e22ce" style={{ marginRight: 4 }} />
-                                            <Text className="text-purple-700 dark:text-purple-400 text-xs">{evt.date} at {evt.time}</Text>
+                                            <Clock size={12} color="#a78bfa" style={{ marginRight: 4 }} />
+                                            <Text className="text-gray-300 text-xs">{evt.date} at {evt.time}</Text>
                                         </View>
-                                        {evt.description && <Text className="text-xs text-purple-800 dark:text-purple-300/80 mt-1" numberOfLines={2}>{evt.description}</Text>}
 
                                         {evt.status === 'pending' ? (
                                             <View className="mt-3 flex-row gap-2">
                                                 <Pressable
                                                     onPress={() => handleConfirmEvent(msg.id, evt.id)}
-                                                    className="flex-1 bg-purple-600 py-2 rounded-lg flex-row items-center justify-center shadow-sm"
+                                                    className="flex-1 bg-neon-primary py-2 rounded-lg flex-row items-center justify-center shadow-sm"
                                                 >
                                                     <Check size={14} color="white" style={{ marginRight: 4 }} />
-                                                    <Text className="text-white text-xs font-bold">Confirm</Text>
+                                                    <Text className="text-white text-xs font-bold uppercase">Confirm</Text>
                                                 </Pressable>
                                                 <Pressable
                                                     onPress={() => handleCancelEvent(msg.id, evt.id)}
-                                                    className="flex-1 bg-white dark:bg-gray-700 border border-purple-200 dark:border-gray-600 py-2 rounded-lg flex-row items-center justify-center"
+                                                    className="flex-1 bg-white/5 border border-white/10 py-2 rounded-lg flex-row items-center justify-center"
                                                 >
-                                                    <X size={14} color="#4b5563" style={{ marginRight: 4 }} />
-                                                    <Text className="text-gray-600 dark:text-gray-200 text-xs font-bold">Cancel</Text>
+                                                    <X size={14} color="#9ca3af" style={{ marginRight: 4 }} />
+                                                    <Text className="text-gray-400 text-xs font-bold uppercase">Cancel</Text>
                                                 </Pressable>
                                             </View>
                                         ) : (
-                                            evt.gCalUrl && (
-                                                <Pressable
-                                                    onPress={() => Linking.openURL(evt.gCalUrl)}
-                                                    className="mt-3 flex-row items-center justify-center w-full bg-purple-600 py-2 rounded-lg shadow-sm"
-                                                >
-                                                    <PlusCircle size={14} color="white" style={{ marginRight: 8 }} />
-                                                    <Text className="text-xs font-bold text-white">Add to Google Calendar</Text>
-                                                </Pressable>
-                                            )
+                                            <View className="mt-3 flex-row items-center justify-center w-full bg-neon-success/20 py-2 rounded-lg border border-neon-success/30">
+                                                <Check size={14} color="#4ade80" style={{ marginRight: 8 }} />
+                                                <Text className="text-xs font-bold text-neon-success uppercase">Confirmed</Text>
+                                            </View>
                                         )}
                                     </View>
                                 </View>
-                            </View>
+                            </GlassCard>
                         );
                     })}
                 </View>
@@ -410,17 +380,19 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
 
         if (msg.payloadType === 'DOC') {
             return (
-                <View className="mt-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-800 rounded-lg p-3">
-                    <View className="flex-row items-center justify-between mb-2">
-                        <View className="flex-row items-center">
-                            <FileText size={16} color="#ea580c" style={{ marginRight: 8 }} />
-                            <Text className="text-orange-800 dark:text-orange-200 font-bold text-sm">{msg.payload.title}</Text>
+                <GlassCard className="mt-2 w-full !mb-0 !bg-neon-secondary/5 border-neon-secondary/20">
+                    <View className="p-3">
+                        <View className="flex-row items-center justify-between mb-2">
+                            <View className="flex-row items-center">
+                                <FileText size={16} color="#06b6d4" style={{ marginRight: 8 }} />
+                                <Text className="text-neon-secondary font-bold text-sm">{msg.payload.title}</Text>
+                            </View>
                         </View>
+                        <ScrollView className="bg-black/30 p-2 rounded border border-white/5 max-h-32">
+                            <Text className="text-xs text-gray-300 font-mono">{msg.payload.content}</Text>
+                        </ScrollView>
                     </View>
-                    <ScrollView className="bg-white dark:bg-gray-900/50 p-2 rounded border border-orange-100 dark:border-orange-800/50 max-h-32">
-                        <Text className="text-xs text-gray-600 dark:text-gray-300 font-mono">{msg.payload.content}</Text>
-                    </ScrollView>
-                </View>
+                </GlassCard>
             );
         }
 
@@ -431,45 +403,42 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
         if (msg.payloadType === 'PAYMENT') {
             const tx = msg.payload;
             return (
-                <View className="mt-2 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-lg p-4 w-full">
-                    <View className="flex-row items-center justify-between mb-3 border-b border-green-200 dark:border-green-800 pb-2">
-                        <View className="flex-row items-center gap-2">
-                            <View className="bg-green-100 dark:bg-green-800 p-1.5 rounded-full">
-                                <Check size={16} color="#15803d" />
+                <GlassCard className="mt-2 w-full !mb-0 !bg-neon-success/5 border-neon-success/20">
+                    <View className="p-4">
+                        <View className="flex-row items-center justify-between mb-3 border-b border-neon-success/20 pb-2">
+                            <View className="flex-row items-center gap-2">
+                                <View className="bg-neon-success/20 p-1.5 rounded-full">
+                                    <Check size={16} color="#16a34a" />
+                                </View>
+                                <Text className="text-sm font-bold text-neon-success">Transaction Verified</Text>
                             </View>
-                            <Text className="text-sm font-bold text-green-800 dark:text-green-200">Payment Success</Text>
+                            <CreditCard size={18} color="#16a34a" />
                         </View>
-                        <CreditCard size={18} color="#16a34a" />
-                    </View>
 
-                    <View className="items-center py-2">
-                        <Text className="text-3xl font-bold text-green-700 dark:text-green-300">
-                            ${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                        </Text>
-                        <Text className="text-xs text-green-600 dark:text-green-400 mt-1 uppercase tracking-wide">
-                            {tx.recipient}
-                        </Text>
+                        <View className="items-center py-2">
+                            <Text className="text-3xl font-black text-white">
+                                ${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </Text>
+                            <Text className="text-xs text-gray-400 mt-1 uppercase tracking-wide">
+                                {tx.recipient}
+                            </Text>
+                        </View>
                     </View>
-
-                    <View className="mt-3 border-t border-green-200 dark:border-green-800 pt-2 flex-row justify-between">
-                        <Text className="text-[10px] text-green-700 dark:text-green-400/80">{tx.description}</Text>
-                        <Text className="text-[10px] text-green-700 dark:text-green-400/80">{new Date(tx.timestamp).toLocaleTimeString()}</Text>
-                    </View>
-                </View>
+                </GlassCard>
             );
         }
 
         if (msg.payloadType === 'SEARCH_RESULT') {
             return (
-                <View className="mt-2 space-y-2">
+                <View className="mt-2 space-y-2 w-full">
                     {msg.payload.results.map((res: any, idx: number) => (
-                        <View key={idx} className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg p-3">
-                            <Text className="font-bold text-blue-700 dark:text-blue-300 text-sm mb-1">
+                        <GlassCard key={idx} className="!mb-0 !bg-blue-500/10 border-blue-500/20 p-3">
+                            <Text className="font-bold text-blue-400 text-sm mb-1">
                                 {res.title}
                             </Text>
-                            <Text className="text-xs text-blue-900 dark:text-blue-200 leading-snug">{res.snippet}</Text>
-                            <Text className="text-[10px] text-blue-500 dark:text-blue-400 mt-1 uppercase">{res.source}</Text>
-                        </View>
+                            <Text className="text-xs text-blue-200 leading-snug">{res.snippet}</Text>
+                            <Text className="text-[10px] text-blue-500 mt-1 uppercase">{res.source}</Text>
+                        </GlassCard>
                     ))}
                 </View>
             );
@@ -479,44 +448,40 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
     };
 
     const renderMessage = ({ item }: { item: Message }) => (
-        <View className={`flex-col max-w-[85%] mb-3 ${item.sender === Sender.USER ? 'self-end items-end' : 'self-start items-start'}`}>
+        <View className={`flex-col max-w-[85%] mb-4 ${item.sender === Sender.USER ? 'self-end items-end' : 'self-start items-start'}`}>
             <View
-                className={`px-3 py-2 rounded-lg shadow-sm w-full ${item.sender === Sender.USER
-                    ? 'bg-[#E7FFDB] dark:bg-[#005c4b] rounded-tr-none'
-                    : item.processingAgent === AgentType.FINANCE
-                        ? 'bg-black border border-green-900 rounded-tl-none'
-                        : 'bg-white dark:bg-[#1f2c34] rounded-tl-none'
+                className={`px-4 py-3 rounded-2xl shadow-sm w-full border ${item.sender === Sender.USER
+                    ? 'bg-neon-primary/20 border-neon-primary/30 rounded-tr-sm'
+                    : 'bg-surrogate-card border-glass-border rounded-tl-sm'
                     }`}
             >
                 {item.processingAgent && item.processingAgent !== AgentType.CHAT && (
-                    <View className={`border-b pb-1 mb-1 flex-row items-center justify-between ${item.processingAgent === AgentType.FINANCE ? 'border-green-800' : 'border-gray-100 dark:border-gray-700'
-                        }`}>
-                        <Text className={`text-[10px] uppercase font-bold tracking-wider ${item.processingAgent === AgentType.SCHEDULE ? 'text-purple-600 dark:text-purple-400' :
-                            item.processingAgent === AgentType.DOCS ? 'text-orange-600 dark:text-orange-400' :
-                                item.processingAgent === AgentType.EMAIL ? 'text-red-600 dark:text-red-400' :
-                                    item.processingAgent === AgentType.PAYMENT ? 'text-green-600 dark:text-green-400' :
-                                        item.processingAgent === AgentType.SEARCH ? 'text-blue-600 dark:text-blue-400' :
-                                            item.processingAgent === AgentType.FINANCE ? 'text-green-500' :
-                                                'text-gray-500'
+                    <View className="border-b border-white/5 pb-1 mb-2 flex-row items-center justify-between">
+                        <Text className={`text-[9px] uppercase font-black tracking-widest ${item.processingAgent === AgentType.SCHEDULE ? 'text-neon-primary' :
+                            item.processingAgent === AgentType.DOCS ? 'text-orange-400' :
+                                item.processingAgent === AgentType.EMAIL ? 'text-neon-accent' :
+                                    item.processingAgent === AgentType.PAYMENT ? 'text-neon-success' :
+                                        item.processingAgent === AgentType.SEARCH ? 'text-blue-400' :
+                                            'text-gray-400'
                             }`}>
-                            {item.processingAgent}
+                            {item.processingAgent} PROTOCOL
                         </Text>
                     </View>
                 )}
 
-                <Text className={`text-[15px] leading-snug ${item.processingAgent === AgentType.FINANCE ? 'text-green-400 font-mono' : 'text-gray-800 dark:text-gray-100'}`}>
+                <Text className={`text-[15px] leading-relaxed ${item.sender === Sender.USER ? 'text-white' : 'text-gray-100'}`}>
                     {item.text}
                 </Text>
 
                 {item.sender === Sender.AGENT && renderAgentWidget(item)}
 
-                <View className="flex-row justify-end items-center gap-2 mt-1">
+                <View className="flex-row justify-end items-center gap-2 mt-1.5">
                     {item.tone && item.sender === Sender.AGENT && (
-                        <Text className={`text-[10px] italic ${item.processingAgent === AgentType.FINANCE ? 'text-green-700' : 'text-gray-400 dark:text-gray-500'}`}>
-                            {item.tone}
+                        <Text className="text-[9px] italic text-gray-500">
+                            mode: {item.tone}
                         </Text>
                     )}
-                    <Text className={`text-[10px] ${item.processingAgent === AgentType.FINANCE ? 'text-green-700' : 'text-gray-400 dark:text-gray-500'}`}>
+                    <Text className="text-[9px] text-gray-500 font-medium">
                         {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
                 </View>
@@ -524,100 +489,99 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
         </View>
     );
 
-    if (!session) return <View className="flex-1 bg-[#EFE7DE] dark:bg-[#0b141a]" />;
+    if (!session) return <View className="flex-1 bg-[#050511]" />;
 
     return (
-        <View className="flex-1 bg-[#EFE7DE] dark:bg-[#0b141a]">
-            {/* Header */}
-            <View style={{ paddingTop: insets.top }} className="bg-[#075E54] dark:bg-[#1f2c34] pb-3 px-2 flex-row items-center shadow-md">
-                <Pressable onPress={() => router.back()} className="p-2 mr-1 rounded-full">
-                    <ArrowLeft size={24} color="white" />
-                </Pressable>
-                <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center mr-3 overflow-hidden">
-                    <Image source={{ uri: `https://picsum.photos/seed/${session.id}/200` }} className="w-full h-full" />
-                </View>
-                <View className="flex-1">
-                    <Text className="font-bold text-lg text-white" numberOfLines={1}>{session.title}</Text>
-                    <View className="flex-row items-center">
-                        <View className="w-2 h-2 bg-green-400 rounded-full mr-1" />
-                        <Text className="text-xs text-green-100">Online</Text>
+        <BackgroundWrapper>
+            <View className="flex-1">
+                {/* Header */}
+                <View style={{ paddingTop: insets.top }} className="bg-black/20 border-b border-glass-border pb-3 px-3 flex-row items-center backdrop-blur-md z-10">
+                    <Pressable onPress={() => router.back()} className="p-2 mr-1 rounded-full active:bg-white/10">
+                        <ArrowLeft size={24} color="white" />
+                    </Pressable>
+                    <View className="w-10 h-10 rounded-full border border-neon-primary/50 bg-black/40 items-center justify-center mr-3 overflow-hidden">
+                        <Image source={{ uri: `https://picsum.photos/seed/${session.id}/200` }} className="w-full h-full opacity-90" />
                     </View>
-                </View>
-                <Pressable onPress={handleClearChat} className="p-2">
-                    <Trash2 size={24} color="white" />
-                </Pressable>
-            </View>
-
-            {/* Main Content Wrapped in KeyboardAvoidingView */}
-            <KeyboardAvoidingView
-                style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-            >
-                {/* Messages */}
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    renderItem={renderMessage}
-                    keyExtractor={item => item.id}
-                    contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                    onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                    className="flex-1"
-                />
-
-                {isProcessing && (
-                    <View className="px-4 py-2">
-                        <Text className="text-gray-500 text-xs">Typing...</Text>
-                    </View>
-                )}
-
-                {attachedImage && (
-                    <View className="bg-[#e9e0d5] dark:bg-[#1f2c34] p-2 flex-row justify-center relative border-t border-gray-300 dark:border-gray-700">
-                        <View>
-                            <Image source={{ uri: attachedImage }} className="h-40 w-40 rounded-lg" resizeMode="cover" />
-                            <Pressable onPress={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-gray-700 rounded-full p-1">
-                                <X size={16} color="white" />
-                            </Pressable>
+                    <View className="flex-1">
+                        <Text className="font-bold text-lg text-white" numberOfLines={1}>{session.title}</Text>
+                        <View className="flex-row items-center">
+                            <View className="w-1.5 h-1.5 bg-neon-success rounded-full mr-1.5 shadow-[0_0_8px_#4ade80]" />
+                            <Text className="text-[10px] text-neon-success tracking-widest uppercase">Connected</Text>
                         </View>
                     </View>
-                )}
-
-                {/* Input */}
-                <View className="p-2 flex-row items-end gap-2 mb-1 bg-[#EFE7DE] dark:bg-[#0b141a]">
-                    <View className="flex-1 bg-white dark:bg-[#1f2c34] rounded-3xl flex-row items-center shadow-sm border border-gray-100 dark:border-gray-700 px-1 py-1 min-h-[48px]">
-                        <Pressable className="p-2">
-                            <Smile size={24} color="#9ca3af" />
-                        </Pressable>
-                        <TextInput
-                            value={input}
-                            onChangeText={setInput}
-                            placeholder={attachedImage ? "Add a caption..." : "Message"}
-                            placeholderTextColor="#9ca3af"
-                            className="flex-1 text-gray-800 dark:text-gray-100 px-2 py-2 max-h-32 text-base"
-                            multiline
-                        />
-                        <Pressable onPress={handleFileUpload} className="p-2 -rotate-45">
-                            <Paperclip size={20} color="#9ca3af" />
-                        </Pressable>
-                        {(input.length > 0 || attachedImage) ? (
-                            <Pressable onPress={handleSend} className="p-2 mr-1 bg-[#075E54] rounded-full">
-                                <Send size={18} color="white" />
-                            </Pressable>
-                        ) : (
-                            <Pressable onPress={handleCamera} className="p-2 mr-1">
-                                <View className="w-5 h-5 border-2 border-gray-400 rounded-full items-center justify-center">
-                                    <View className="w-2 h-2 bg-gray-400 rounded-full" />
-                                </View>
-                            </Pressable>
-                        )}
-                    </View>
-                    <Pressable className="w-12 h-12 rounded-full bg-[#00A884] items-center justify-center shadow-md">
-                        <Mic size={24} color="white" />
+                    <Pressable onPress={handleClearChat} className="p-2 active:bg-white/10 rounded-full">
+                        <Trash2 size={20} color="rgba(255,255,255,0.7)" />
                     </Pressable>
                 </View>
-            </KeyboardAvoidingView>
-        </View>
+
+                {/* Main Content Wrapped in KeyboardAvoidingView */}
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                >
+                    {/* Messages */}
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        renderItem={renderMessage}
+                        keyExtractor={item => item.id}
+                        contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
+                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                        className="flex-1"
+                    />
+
+                    {isProcessing && (
+                        <View className="px-6 py-2">
+                            <Text className="text-neon-secondary text-xs uppercase tracking-widest animate-pulse">Computing...</Text>
+                        </View>
+                    )}
+
+                    {attachedImage && (
+                        <View className="bg-black/80 p-3 flex-row justify-center relative border-t border-glass-border">
+                            <View>
+                                <Image source={{ uri: attachedImage }} className="h-40 w-40 rounded-xl border border-glass-border" resizeMode="cover" />
+                                <Pressable onPress={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-red-600 rounded-full p-1 shadow-lg">
+                                    <X size={16} color="white" />
+                                </Pressable>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Input */}
+                    <View className="p-2 flex-row items-end gap-2 mb-1">
+                        <View className="flex-1 bg-white/5 rounded-[24px] flex-row items-center border border-glass-border px-1.5 py-1 min-h-[48px] backdrop-blur-xl">
+                            <Pressable className="p-2">
+                                <Smile size={24} color="rgba(255,255,255,0.4)" />
+                            </Pressable>
+                            <TextInput
+                                value={input}
+                                onChangeText={setInput}
+                                placeholder={attachedImage ? "Add caption..." : "Transmit message..."}
+                                placeholderTextColor="rgba(255,255,255,0.3)"
+                                className="flex-1 text-white px-2 py-2 max-h-32 text-base"
+                                multiline
+                            />
+                            <Pressable onPress={handleFileUpload} className="p-2 -rotate-45 active:opacity-70">
+                                <Paperclip size={20} color="rgba(255,255,255,0.4)" />
+                            </Pressable>
+                            {(input.length > 0 || attachedImage) ? (
+                                <Pressable onPress={handleSend} className="p-2 mr-1 bg-neon-primary rounded-full shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+                                    <Send size={18} color="white" />
+                                </Pressable>
+                            ) : (
+                                <Pressable onPress={handleCamera} className="p-2 mr-1">
+                                    <Camera size={22} color="rgba(255,255,255,0.4)" />
+                                </Pressable>
+                            )}
+                        </View>
+                        <Pressable className="w-12 h-12 rounded-full bg-white/5 border border-glass-border items-center justify-center active:bg-neon-primary/20">
+                            <Mic size={24} color="#8B5CF6" />
+                        </Pressable>
+                    </View>
+                </KeyboardAvoidingView>
+            </View>
+        </BackgroundWrapper>
     );
 };
 
