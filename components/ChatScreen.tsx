@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, FlatList, Image, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Linking, ScrollView } from 'react-native';
-import { Send, MicOff, MoreVertical, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown } from 'lucide-react-native';
+import { Send, MicOff, MoreVertical, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown, VolumeX } from 'lucide-react-native';
 import { Message, Sender, AgentType, ChatSession } from '../types';
 import { generateSurrogateResponse } from '../services/geminiService';
 import { db } from '../services/db';
@@ -245,6 +245,10 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
             { text: "Cancel", style: "cancel" },
             { text: "Purge", style: "destructive", onPress: () => setMessages([]) }
         ]);
+    };
+
+    const handleStopSpeech = async () => {
+        await Speech.stop();
     };
 
     const handleConfirmEvent = async (msgId: string, eventId: string) => {
@@ -520,6 +524,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                             <Text className="text-[10px] text-neon-success tracking-widest uppercase">Connected</Text>
                         </View>
                     </View>
+                    <Pressable onPress={handleStopSpeech} className="p-2 active:bg-white/10 rounded-full mr-1">
+                        <VolumeX size={20} color="rgba(255,255,255,0.7)" />
+                    </Pressable>
                     <Pressable onPress={handleClearChat} className="p-2 active:bg-white/10 rounded-full">
                         <Trash2 size={20} color="rgba(255,255,255,0.7)" />
                     </Pressable>
@@ -528,7 +535,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                 {/* Main Content Wrapped in KeyboardAvoidingView */}
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
-                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 30}
                 >
                     {/* Messages */}
                     <FlatList

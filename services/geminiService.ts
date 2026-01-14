@@ -2,8 +2,8 @@ import { AgentType } from "../types";
 import { agentTools, AgentResult } from "./agentTools";
 import { db } from "./db";
 
-const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '';
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const apiKey = process.env.EXPO_PUBLIC_MISTRAL_API_KEY || '';
+const MISTRAL_URL = "https://api.mistral.ai/v1/chat/completions";
 
 // Helper to robustly extract JSON from text that might contain markdown or trailing chars
 const extractJSONString = (text: string): string => {
@@ -74,7 +74,7 @@ export const generateSurrogateResponse = async (
 }> => {
     if (!apiKey) {
         return {
-            text: "I'm offline. Please check the OpenRouter API configuration.",
+            text: "I'm offline. Please check the Mistral API configuration.",
             tone: "Neutral",
             language: "en",
             agent: AgentType.CHAT,
@@ -142,7 +142,7 @@ Existing Events in DB: ${contextEvents || "None"}
 `;
 
     try {
-        const model = 'meta-llama/llama-3.3-70b-instruct:free'; // Using OpenRouter Model
+        const model = 'mistral-large-latest'; // Using Mistral Model
 
         const messages: any[] = [
             { role: "system", content: SYSTEM_INSTRUCTION }
@@ -161,7 +161,7 @@ Existing Events in DB: ${contextEvents || "None"}
             userContent.push({
                 type: "image_url",
                 image_url: {
-                    url: imageBase64 // OpenRouter/OpenAI accepts data:image/... base64 strings directly
+                    url: imageBase64
                 }
             });
         }
@@ -170,30 +170,29 @@ Existing Events in DB: ${contextEvents || "None"}
         messages.push({ role: "user", content: "Respond in valid JSON." });
 
 
-        const response = await fetch(OPENROUTER_URL, {
+        const response = await fetch(MISTRAL_URL, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${apiKey}`,
-                "HTTP-Referer": "https://ai-surrogate-clone.com", // Required by OpenRouter
-                "X-Title": "AI Surrogate Clone", // Optional
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
                 model: model,
-                messages: messages
+                messages: messages,
+                response_format: { type: "json_object" }
             })
         });
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error("OpenRouter API Error:", response.status, errText);
-            throw new Error(`OpenRouter Error: ${response.status}`);
+            console.error("Mistral API Error:", response.status, errText);
+            throw new Error(`Mistral Error: ${response.status}`);
         }
 
         const data = await response.json();
         const jsonText = data.choices[0].message.content;
 
-        if (!jsonText) throw new Error("Empty response from OpenRouter");
+        if (!jsonText) throw new Error("Empty response from Mistral");
 
         // Robustly Extract JSON using the helper
         const cleanJson = extractJSONString(jsonText);
@@ -239,7 +238,7 @@ Existing Events in DB: ${contextEvents || "None"}
         };
 
     } catch (error) {
-        console.error("Gemini/OpenRouter Error:", error);
+        console.error("Gemini/Mistral Error:", error);
         return {
             text: "I encountered a processing error. Please try again.",
             tone: "Error",
