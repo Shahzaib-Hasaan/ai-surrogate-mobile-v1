@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, FlatList, Image, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Linking, ScrollView } from 'react-native';
-import { Send, Mic, MicOff, MoreVertical, Paperclip, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown, Camera, File as FileIcon, Play, Square } from 'lucide-react-native';
+import { Send, Mic, MicOff, MoreVertical, Paperclip, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown, Camera, File as FileIcon, Play, Square, Volume2, VolumeX } from 'lucide-react-native';
 import { Message, Sender, AgentType, ChatSession } from '../types';
 import { generateSurrogateResponse } from '../services/geminiService';
 import { db } from '../services/db';
-import * as Speech from 'expo-speech';
+import { voiceService } from '../services/voiceService';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { Audio } from 'expo-av';
@@ -142,6 +142,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
     const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
     const [recording, setRecording] = useState<Audio.Recording | null>(null);
     const [isRecording, setIsRecording] = useState(false);
+    const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
     const flatListRef = useRef<FlatList>(null);
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -166,6 +167,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
             if (recording) {
                 recording.stopAndUnloadAsync();
             }
+            voiceService.cleanup();
         };
     }, []);
 
@@ -194,8 +196,23 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
         }
     }, [messages]);
 
-    const speakResponse = (text: string) => {
-        Speech.speak(text);
+    const handleTTSToggle = async (messageId: string, text: string) => {
+        try {
+            if (speakingMessageId === messageId) {
+                // Stop if currently speaking this message
+                await voiceService.stop();
+                setSpeakingMessageId(null);
+            } else {
+                // Start speaking this message
+                setSpeakingMessageId(messageId);
+                await voiceService.speak(text, messageId, () => {
+                    setSpeakingMessageId(null);
+                });
+            }
+        } catch (error) {
+            console.error('TTS Toggle Error:', error);
+            setSpeakingMessageId(null);
+        }
     };
 
     const handleSend = async () => {
@@ -241,7 +258,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
         };
 
         setMessages(prev => [...prev, newAgentMsg]);
-        speakResponse(aiResponse.text);
+        // Note: TTS removed from auto-play, user can tap speaker icon
     };
 
     const handleFileUpload = async () => {
@@ -572,12 +589,26 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
 
                 {item.sender === Sender.AGENT && renderAgentWidget(item)}
 
-                <View className="flex-row justify-end items-center gap-2 mt-1.5">
-                    {item.tone && item.sender === Sender.AGENT && (
-                        <Text className="text-[9px] italic text-gray-500">
-                            mode: {item.tone}
-                        </Text>
-                    )}
+                <View className="flex-row justify-between items-center mt-1.5">
+                    <View className="flex-row items-center gap-2">
+                        {item.sender === Sender.AGENT && (
+                            <Pressable 
+                                onPress={() => handleTTSToggle(item.id, item.text)}
+                                className="p-1.5 rounded-full active:bg-white/10"
+                            >
+                                {speakingMessageId === item.id ? (
+                                    <Volume2 size={16} color="#8B5CF6" />
+                                ) : (
+                                    <VolumeX size={16} color="rgba(255,255,255,0.4)" />
+                                )}
+                            </Pressable>
+                        )}
+                        {item.tone && item.sender === Sender.AGENT && (
+                            <Text className="text-[9px] italic text-gray-500">
+                                mode: {item.tone}
+                            </Text>
+                        )}
+                    </View>
                     <Text className="text-[9px] text-gray-500 font-medium">
                         {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>

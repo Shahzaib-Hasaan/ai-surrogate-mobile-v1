@@ -49,12 +49,11 @@ EXPO_PUBLIC_MISTRAL_API_KEY=your_mistral_api_key_here
 ```
 Get your free Mistral API key at: https://console.mistral.ai/
 
-### 4. Run the App
-Start the development server:
+### 4. Start Development Server
 ```bash
-npx expo start -c
+npx expo start
 ```
-- Scan the QR code with **Expo Go** (Android) or the Camera app (iOS).
+Scan QR code with **Expo Go** (Android) or Camera app (iOS).
 
 ## 🏗 Architecture
 

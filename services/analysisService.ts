@@ -28,7 +28,7 @@ export const generateMarketAnalysis = async (symbol: string, price: number, chan
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                model: "open-mistral-7b",
+                model: "mistral-large-latest",
                 messages: [{ role: "user", content: prompt }]
             })
         });

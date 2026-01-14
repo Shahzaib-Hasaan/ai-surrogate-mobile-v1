@@ -147,7 +147,7 @@ Existing Events in DB: ${contextEvents || "None"}
 `;
 
     try {
-        const model = 'open-mistral-7b'; // Using Mistral 7B directly - fast and reliable
+        const model = 'mistral-large-latest'; // Using Mistral Large (123B) - powerful reasoning and context understanding
 
         const messages: any[] = [
             { role: "system", content: SYSTEM_INSTRUCTION }
