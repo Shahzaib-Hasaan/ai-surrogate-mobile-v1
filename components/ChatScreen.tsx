@@ -323,7 +323,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                                 <View className="w-1.5 h-1.5 bg-neon-secondary rounded-full mr-1.5 shadow-[0_0_5px_#06b6d4]" />
                                 <Text className="text-[10px] text-neon-secondary font-bold uppercase tracking-wider">Neural Analysis</Text>
                             </View>
-                            <Text className="text-xs text-gray-300 font-mono leading-relaxed">
+                            <Text selectable={true} selectionColor="#EC4899" className="text-xs text-gray-300 font-mono leading-relaxed">
                                 {report.analysis}
                             </Text>
                         </View>
@@ -404,7 +404,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                             </View>
                         </View>
                         <ScrollView className="bg-black/30 p-2 rounded border border-white/5 max-h-32">
-                            <Text className="text-xs text-gray-300 font-mono">{msg.payload.content}</Text>
+                            <Text selectable={true} selectionColor="#EC4899" className="text-xs text-gray-300 font-mono">{msg.payload.content}</Text>
                         </ScrollView>
                     </View>
                 </GlassCard>
@@ -484,7 +484,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                     </View>
                 )}
 
-                <Text className={`text-[15px] leading-relaxed ${item.sender === Sender.USER ? 'text-white' : 'text-gray-100'}`}>
+                <Text selectable={true} selectionColor="#EC4899" className={`text-[15px] leading-relaxed ${item.sender === Sender.USER ? 'text-white' : 'text-gray-100'}`}>
                     {item.text}
                 </Text>
 
@@ -535,8 +535,8 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                 {/* Main Content Wrapped in KeyboardAvoidingView */}
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 30}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+                    keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                 >
                     {/* Messages */}
                     <FlatList
@@ -570,9 +570,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                     {/* Input */}
                     <View className="p-2 flex-row items-end gap-2 mb-1">
                         <View className="flex-1 bg-white/5 rounded-[24px] flex-row items-center border border-glass-border px-1.5 py-1 min-h-[48px] backdrop-blur-xl">
-                            <Pressable className="p-2">
-                                <Smile size={24} color="rgba(255,255,255,0.4)" />
-                            </Pressable>
+
                             <TextInput
                                 value={input}
                                 onChangeText={setInput}
