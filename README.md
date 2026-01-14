@@ -8,7 +8,6 @@
 The app routes your requests to specialized agents:
 - **Schedule Agent**: Manages your calendar. Can create events and generate Google Calendar links.
 - **Email Agent**: Drafts professional emails based on context and generates direct `mailto` or Gmail links.
-- **Docs Agent**: Creates and saves text documents/notes to local storage.
 - **Payment Agent**: Simulates financial transactions and tracks payment history.
 - **Financial Agent**: Analyzes stock market data (Simulated/Mock data for demo).
 - **Search Agent**: Performs web searches (Simulated/Mock results for demo).

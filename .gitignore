@@ -19,3 +19,6 @@ yarn-error.log*
 *.mobileprovision
 *.orig.*
 root
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
