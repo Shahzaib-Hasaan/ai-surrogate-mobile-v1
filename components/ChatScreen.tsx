@@ -362,21 +362,30 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                                         </View>
 
                                         {evt.status === 'pending' ? (
-                                            <View className="mt-3 flex-row gap-2">
+                                            <View className="mt-3 flex-col gap-2">
                                                 <Pressable
-                                                    onPress={() => handleConfirmEvent(msg.id, evt.id)}
-                                                    className="flex-1 bg-neon-primary py-2 rounded-lg flex-row items-center justify-center shadow-sm"
+                                                    onPress={() => Linking.openURL(evt.gCalUrl)}
+                                                    className="w-full bg-white/5 border border-white/10 py-2 rounded-lg flex-row items-center justify-center active:bg-white/10"
                                                 >
-                                                    <Check size={14} color="white" style={{ marginRight: 4 }} />
-                                                    <Text className="text-white text-xs font-bold uppercase">Confirm</Text>
+                                                    <Calendar size={14} color="#EC4899" style={{ marginRight: 8 }} />
+                                                    <Text className="text-gray-300 text-xs font-bold uppercase">Add to Google Calendar</Text>
                                                 </Pressable>
-                                                <Pressable
-                                                    onPress={() => handleCancelEvent(msg.id, evt.id)}
-                                                    className="flex-1 bg-white/5 border border-white/10 py-2 rounded-lg flex-row items-center justify-center"
-                                                >
-                                                    <X size={14} color="#9ca3af" style={{ marginRight: 4 }} />
-                                                    <Text className="text-gray-400 text-xs font-bold uppercase">Cancel</Text>
-                                                </Pressable>
+                                                <View className="flex-row gap-2">
+                                                    <Pressable
+                                                        onPress={() => handleConfirmEvent(msg.id, evt.id)}
+                                                        className="flex-1 bg-neon-primary py-2 rounded-lg flex-row items-center justify-center shadow-sm"
+                                                    >
+                                                        <Check size={14} color="white" style={{ marginRight: 4 }} />
+                                                        <Text className="text-white text-xs font-bold uppercase">Confirm</Text>
+                                                    </Pressable>
+                                                    <Pressable
+                                                        onPress={() => handleCancelEvent(msg.id, evt.id)}
+                                                        className="flex-1 bg-white/5 border border-white/10 py-2 rounded-lg flex-row items-center justify-center"
+                                                    >
+                                                        <X size={14} color="#9ca3af" style={{ marginRight: 4 }} />
+                                                        <Text className="text-gray-400 text-xs font-bold uppercase">Cancel</Text>
+                                                    </Pressable>
+                                                </View>
                                             </View>
                                         ) : (
                                             <View className="mt-3 flex-row items-center justify-center w-full bg-neon-success/20 py-2 rounded-lg border border-neon-success/30">
