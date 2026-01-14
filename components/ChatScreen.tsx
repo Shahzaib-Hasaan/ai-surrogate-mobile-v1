@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, FlatList, Image, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Linking, ScrollView } from 'react-native';
-import { Send, Mic, MicOff, MoreVertical, Paperclip, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown, Camera } from 'lucide-react-native';
+import { Send, MicOff, MoreVertical, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown } from 'lucide-react-native';
 import { Message, Sender, AgentType, ChatSession } from '../types';
 import { generateSurrogateResponse } from '../services/geminiService';
 import { db } from '../services/db';
@@ -573,22 +573,12 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                                 className="flex-1 text-white px-2 py-2 max-h-32 text-base"
                                 multiline
                             />
-                            <Pressable onPress={handleFileUpload} className="p-2 -rotate-45 active:opacity-70">
-                                <Paperclip size={20} color="rgba(255,255,255,0.4)" />
-                            </Pressable>
-                            {(input.length > 0 || attachedImage) ? (
+                            {(input.length > 0 || attachedImage) && (
                                 <Pressable onPress={handleSend} className="p-2 mr-1 bg-neon-primary rounded-full shadow-[0_0_15px_rgba(139,92,246,0.5)]">
                                     <Send size={18} color="white" />
                                 </Pressable>
-                            ) : (
-                                <Pressable onPress={handleCamera} className="p-2 mr-1">
-                                    <Camera size={22} color="rgba(255,255,255,0.4)" />
-                                </Pressable>
                             )}
                         </View>
-                        <Pressable className="w-12 h-12 rounded-full bg-white/5 border border-glass-border items-center justify-center active:bg-neon-primary/20">
-                            <Mic size={24} color="#8B5CF6" />
-                        </Pressable>
                     </View>
                 </KeyboardAvoidingView>
             </View>
