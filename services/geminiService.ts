@@ -2,8 +2,8 @@ import { AgentType } from "../types";
 import { agentTools, AgentResult } from "./agentTools";
 import { db } from "./db";
 
-const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY || '';
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+const apiKey = process.env.EXPO_PUBLIC_MISTRAL_API_KEY || '';
+const MISTRAL_API_URL = "https://api.mistral.ai/v1/chat/completions";
 
 // Helper to robustly extract JSON from text that might contain markdown or trailing chars
 const extractJSONString = (text: string): string => {
@@ -74,7 +74,7 @@ export const generateSurrogateResponse = async (
 }> => {
     if (!apiKey) {
         return {
-            text: "I'm offline. Please check the OpenRouter API configuration.",
+            text: "I'm offline. Please check the Mistral API configuration.",
             tone: "Neutral",
             language: "en",
             agent: AgentType.CHAT,
@@ -147,7 +147,7 @@ Existing Events in DB: ${contextEvents || "None"}
 `;
 
     try {
-        const model = 'google/gemini-2.0-flash-exp:free'; // Using Gemini 2.0 Flash via OpenRouter for Multimodal Support
+        const model = 'open-mistral-7b'; // Using Mistral 7B directly - fast and reliable
 
         const messages: any[] = [
             { role: "system", content: SYSTEM_INSTRUCTION }
@@ -192,12 +192,10 @@ Existing Events in DB: ${contextEvents || "None"}
         messages.push({ role: "user", content: "Respond in valid JSON." });
 
 
-        const response = await fetch(OPENROUTER_URL, {
+        const response = await fetch(MISTRAL_API_URL, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${apiKey}`,
-                "HTTP-Referer": "https://ai-surrogate-clone.com", // Required by OpenRouter
-                "X-Title": "AI Surrogate Clone", // Optional
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
@@ -208,8 +206,8 @@ Existing Events in DB: ${contextEvents || "None"}
 
         if (!response.ok) {
             const errText = await response.text();
-            console.error("OpenRouter API Error:", response.status, errText);
-            throw new Error(`OpenRouter Error: ${response.status}`);
+            console.error("Mistral API Error:", response.status, errText);
+            throw new Error(`Mistral API Error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -262,7 +260,7 @@ Existing Events in DB: ${contextEvents || "None"}
         };
 
     } catch (error) {
-        console.error("Gemini/OpenRouter Error:", error);
+        console.error("Mistral AI Error:", error);
         return {
             text: "I encountered a processing error. Please try again.",
             tone: "Error",
