@@ -10,7 +10,7 @@ The app routes your requests to specialized agents:
 - **Email Agent**: Drafts professional emails based on context and generates direct `mailto` or Gmail links.
 - **Docs Agent**: Creates and saves text documents/notes to local storage.
 - **Payment Agent**: Simulates financial transactions and tracks payment history.
-- **Financial Agent**: Analyzes stock market data (Simulated/Mock data for demo).
+- **Financial Agent**: Fetches real-time crypto prices (CoinGecko) and stocks (Yahoo Finance), analyzed by Mistral AI.
 - **Search Agent**: Performs web searches (Simulated/Mock results for demo).
 
 ### 🛠 Tech Stack
@@ -62,14 +62,16 @@ npx expo start -c
 - **`geminiService.ts`**: Handles communication with the OpenRouter API. It constructs the system prompt, manages chat history, and parses the LLM's JSON response.
 - **`agentTools.ts`**: Contains the logic for each agent. It executes the specific actions (e.g., `db.addEvent`, `generateGoogleCalendarUrl`) requested by the LLM.
 - **`db.ts`**: A wrapper around `AsyncStorage` to manage local data persistence for users, events, documents, and chat history.
+- **`financeService.ts`**: Fetches real-time market data from CoinGecko (Crypto) and Yahoo Finance (Stocks).
+- **`analysisService.ts`**: Uses Mistral AI to generate technical analysis and trading recommendations.
 
 ### UI Components
 - **`ChatScreen.tsx`**: The main interface. Handles voice input, image attachments, and renders different "Agent Cards" based on the response type (e.g., a special card for Payment confirmation or Stock analysis).
 - **`DashboardScreen.tsx`**: Visualizes agent activity and task logs.
 
 ## ⚠️ Notes
-- **Web Support**: The current version is optimized for **Mobile (Android/iOS)**. Web support is experimental and may have layout issues due to React Native Web compatibility with React 19.
-- **Mock Data**: The **Search** and **Financial** agents currently use mock/simulated data for demonstration purposes, as the OpenRouter API does not natively support Google Search grounding like the official Gemini SDK.
+- **Web Support**: The current version is optimized for **Mobile (Android/iOS)**. Web support is experimental.
+- **Mock Data**: The **Search** agent currently uses simulated data. The **Financial Agent** uses LIVE data for crypto and stocks.
 
 ## 📄 License
 MIT
