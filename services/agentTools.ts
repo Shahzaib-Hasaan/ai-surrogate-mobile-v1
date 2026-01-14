@@ -219,46 +219,23 @@ export const agentTools: Record<AgentType, (action: string, params: any) => Prom
                     return { success: false, message: "Missing stock symbol (e.g., AAPL, BTC)." };
                 }
 
-                let report: FinancialReport;
+                const { getRealMarketData } = require('./financeService');
+                const { generateMarketAnalysis } = require('./analysisService');
 
-                // Attempt to parse the provided price
-                const parsedPrice = parseNumber(params.price);
+                let report = await getRealMarketData(params.symbol);
 
-                // Logic: Only use Gemini's data if we successfully parsed a price > 0.
-                // If params.price was "N/A", undefined, or empty, parseNumber returns 0.
-                if (parsedPrice > 0) {
-
-                    let week52High = parseNumber(params.week52High);
-                    let week52Low = parseNumber(params.week52Low);
-
-                    // Intelligent fallback for range if not found but price is found
-                    if (week52High === 0 || week52Low === 0) {
-                        week52High = parsedPrice * 1.25; // Estimate high
-                        week52Low = parsedPrice * 0.75;  // Estimate low
-                    }
-
-                    report = {
-                        symbol: params.symbol.toUpperCase(),
-                        price: parsedPrice,
-                        currency: params.currency || 'USD',
-                        change: parseNumber(params.change),
-                        changePercent: parseNumber(params.changePercent),
-                        marketCap: params.marketCap || 'N/A',
-                        peRatio: params.peRatio ? parseNumber(params.peRatio) : null,
-                        week52High: week52High,
-                        week52Low: week52Low,
-                        recommendation: (params.recommendation as any) || 'HOLD',
-                        analysis: params.analysis || `Real-time market data retrieved for ${params.symbol}.`
-                    };
+                if (report) {
+                    // Enrich with AI Analysis
+                    report.analysis = await generateMarketAnalysis(report.symbol, report.price, report.changePercent);
                 } else {
-                    // Fallback to mock data if Gemini returned no price or valid data
+                    // Fallback to mock data if API fails
                     report = getMockStockData(params.symbol);
-                    report.analysis += " (Note: Simulated Data - Search failed to retrieve live price)";
+                    report.analysis += " (Note: Simulated Data - Live feed unavailable via Yahoo Finance)";
                 }
 
                 return {
                     success: true,
-                    message: `I've analyzed the latest market data for ${report.symbol}.`,
+                    message: `I've analyzed the live market data for ${report.symbol}.`,
                     data: report,
                     payloadType: 'FINANCE_REPORT'
                 };

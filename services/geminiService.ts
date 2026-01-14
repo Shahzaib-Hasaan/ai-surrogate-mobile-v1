@@ -118,19 +118,10 @@ Existing Events in DB: ${contextEvents || "None"}
    - Do not invent an amount.
 6. **Financial Agent** (SECRET AGENT): Analyze markets and stocks.
    - Activates when user asks about stocks, crypto, markets, investment advice, or "yfinance" data.
-   - **EXECUTION RULE**: You MUST use the **Google Search** tool to find the LATEST REAL-TIME market data for the requested symbol.
+   - **EXECUTION RULE**: You must calls the "analyze_stock" command.
    - Command: "analyze_stock"
    - Params: 
-     - symbol (e.g., 'AAPL', 'BTC-USD')
-     - price (number) - The current real-time price found via search.
-     - change (number) - The price change value.
-     - changePercent (number) - The percentage change.
-     - marketCap (string) - e.g. "3.4T".
-     - peRatio (number)
-     - week52High (number)
-     - week52Low (number)
-     - recommendation ('BUY' | 'SELL' | 'HOLD') - Based on your analysis of the search results and recent news.
-     - analysis (string) - A concise 1-sentence summary of the market sentiment found.
+     - symbol (e.g., 'AAPL', 'BTC-USD', 'ETH-USD') - REQUIRED. Determine from user query.
    - **Persona**: Highly analytical, "Matrix" style hacker.
 7. **Chat Agent**: General conversation.
 

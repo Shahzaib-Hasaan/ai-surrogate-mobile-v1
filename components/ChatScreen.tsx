@@ -313,6 +313,17 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                             </View>
                         </View>
                     </View>
+                    {report.analysis && (
+                        <View className="mx-4 mb-4 mt-1 bg-black/40 p-3 rounded-lg border border-white/5">
+                            <View className="flex-row items-center mb-1">
+                                <View className="w-1.5 h-1.5 bg-neon-secondary rounded-full mr-1.5 shadow-[0_0_5px_#06b6d4]" />
+                                <Text className="text-[10px] text-neon-secondary font-bold uppercase tracking-wider">Neural Analysis</Text>
+                            </View>
+                            <Text className="text-xs text-gray-300 font-mono leading-relaxed">
+                                {report.analysis}
+                            </Text>
+                        </View>
+                    )}
                 </GlassCard>
             );
         }
