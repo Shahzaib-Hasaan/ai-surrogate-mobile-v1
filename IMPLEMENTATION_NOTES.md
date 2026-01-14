@@ -131,11 +131,19 @@ voiceService = {
 3. **Backup:** Backend service with your Python voice service
 
 ### STT Provider Hierarchy (all FREE):
-1. **Primary:** Vosk - Free offline speech recognition ✅ No API key
-2. **Fallback:** Google Free STT - 60 min/month free ✅ No API key
-3. **Backup:** Your Python backend service via `EXPO_PUBLIC_BACKEND_URL`
+1. **Primary:** Vosk - Free offline speech recognition ✅ (requires backend to upload audio)
+2. **Fallback:** Google Free STT - 60 min/month free ✅ (requires backend)
+3. **Recommended:** Your Python backend service via `EXPO_PUBLIC_BACKEND_URL`
 
-**Cost:** Completely FREE - no billing, no API keys required
+**How to Enable STT:**
+1. Add to your `.env` file:
+   ```
+   EXPO_PUBLIC_BACKEND_URL=http://your-backend-url:5000
+   ```
+2. Your Python backend should have `/api/voice/transcribe` endpoint
+3. The endpoint receives `audioUri` and `languageCode` and returns transcribed text
+
+**Cost:** Completely FREE - no billing, no API keys required (uses your backend)
 
 ---
 

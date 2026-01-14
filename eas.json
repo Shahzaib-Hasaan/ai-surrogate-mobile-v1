@@ -11,9 +11,6 @@
             "distribution": "internal",
             "android": {
                 "buildType": "apk"
-            },
-            "env": {
-                "EXPO_PUBLIC_MISTRAL_API_KEY": "your_mistral_api_key_here"
             }
         },
         "production": {}

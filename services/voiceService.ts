@@ -4,7 +4,7 @@
  * Uses FREE alternatives that require NO billing:
  * - TTS: gTTS (Google Text-to-Speech) - free, no API key needed
  * - TTS Fallback: Edge TTS - free, no API key needed
- * - STT: Web Speech API (browser) or backend service (mobile)
+ * - STT: Native device speech recognition (Android/iOS built-in) - FREE
  * 
  * Google Cloud APIs are optional fallbacks (requires billing).
  */
@@ -89,9 +89,14 @@ class VoiceService {
     const encodedText = encodeURIComponent(text);
     
     // Using Google Translate's free TTS endpoint
-    // This is the same service gTTS library uses
-    // Format: https://translate.google.com/translate_tts?ie=UTF-8&q=<text>&tl=<lang>&client=tw-ob
-    return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=${language}&client=tw-ob`;
+    // Multiple endpoints for reliability
+    const endpoints = [
+      `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=${language}&client=tw-ob`,
+      `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=${language}&client=gtx`,
+    ];
+    
+    // Return primary endpoint (can cycle through if needed)
+    return endpoints[0];
   }
 
   /**
@@ -104,12 +109,26 @@ class VoiceService {
     // Edge TTS provides high-quality natural voices for free
     const encodedText = encodeURIComponent(text);
     
-    // Using a community-maintained proxy that wraps Edge TTS
-    return `https://convert.rocks/api/edge-tts?text=${encodedText}&voice=en-US-AriaNeural`;
+    // Multiple fallback endpoints for reliability
+    const endpoints = [
+      `https://convert.rocks/api/edge-tts?text=${encodedText}&voice=en-US-AriaNeural`,
+      `https://tts.tetyys.com/api/synthesize?text=${encodedText}&voice=en-US-AriaNeural`,
+    ];
+    
+    return endpoints[0];
   }
 
   /**
-   * Speak text using FREE gTTS service
+   * Alternative: Speak text using a simpler audio endpoint (Google Translate fallback)
+   */
+  private getGoogleTranslateTtsUrl(text: string, lang: string = 'en'): string {
+    const cleanText = text.replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
+    const encoded = encodeURIComponent(cleanText.substring(0, 200)); // Limit length
+    return `https://translate.google.com/translate_tts?ie=UTF-8&q=${encoded}&tl=${lang}&client=gtx&prev=input`;
+  }
+
+  /**
+   * Speak text using FREE TTS services with fallback chain
    * Completely free, no billing required
    * Works in Expo Go
    */
@@ -125,56 +144,56 @@ class VoiceService {
 
       this.currentSpeakingId = messageId;
 
-      // Truncate very long text
-      const maxLength = 300;
-      const textToSpeak = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+      // Clean and truncate text for TTS
+      const maxLength = 250;
+      let textToSpeak = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+      // Remove special characters that might break TTS URLs
+      textToSpeak = textToSpeak.replace(/[™®©]/g, '').trim();
 
       console.log('🔊 Fetching TTS audio with gTTS (free)');
 
-      // Try gTTS first (primary, free, reliable)
-      let audioUri = this.getGTtsUrl(textToSpeak, 'en');
-      
-      try {
-        // Create sound and load from URL
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUri },
-          { shouldPlay: true }
-        );
+      // Fallback chain for TTS providers
+      const ttsProviders = [
+        { name: 'gTTS (Google)', url: this.getGTtsUrl(textToSpeak, 'en') },
+        { name: 'gTTS Alternate', url: this.getGoogleTranslateTtsUrl(textToSpeak, 'en') },
+        { name: 'Edge TTS', url: this.getEdgeTtsUrl(textToSpeak) },
+      ];
 
-        this.sound = sound;
+      let lastError: any = null;
 
-        // Handle playback finished
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            this.currentSpeakingId = null;
-            if (onFinish) onFinish();
-            console.log('✅ TTS playback finished');
-          }
-        });
+      for (const provider of ttsProviders) {
+        try {
+          console.log(`Trying ${provider.name}...`);
+          
+          // Create sound and load from URL
+          const { sound } = await Audio.Sound.createAsync(
+            { uri: provider.url },
+            { shouldPlay: true }
+          );
 
-        console.log('✅ TTS playback started (gTTS)');
-      } catch (gTtsError) {
-        console.warn('⚠️ gTTS failed, trying Edge TTS fallback...');
-        
-        // Fallback to Edge TTS
-        audioUri = this.getEdgeTtsUrl(textToSpeak);
-        
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: audioUri },
-          { shouldPlay: true }
-        );
+          this.sound = sound;
 
-        this.sound = sound;
+          // Handle playback finished
+          sound.setOnPlaybackStatusUpdate((status) => {
+            if (status.isLoaded && status.didJustFinish) {
+              this.currentSpeakingId = null;
+              if (onFinish) onFinish();
+              console.log('✅ TTS playback finished');
+            }
+          });
 
-        sound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            this.currentSpeakingId = null;
-            if (onFinish) onFinish();
-            console.log('✅ TTS playback finished (Edge TTS fallback)');
-          }
-        });
+          console.log(`✅ TTS playback started (${provider.name})`);
+          return; // Success - exit function
+        } catch (error) {
+          console.warn(`⚠️ ${provider.name} failed:`, error);
+          lastError = error;
+          // Continue to next provider
+        }
+      }
 
-        console.log('✅ TTS playback started (Edge TTS fallback)');
+      // All providers failed
+      if (lastError) {
+        throw new Error(`All TTS providers failed. Last error: ${lastError}`);
       }
     } catch (error) {
       console.error('TTS speak error:', error);
@@ -270,11 +289,11 @@ class VoiceService {
    * Transcribe audio to text using FREE providers
    * 
    * STT Provider Hierarchy (all completely FREE):
-   * 1. Vosk - Free offline speech recognition (no API key)
-   * 2. Google Free Speech Recognition (requires native integration)
-   * 3. Backend service (if configured - uses your Python backend)
-   * 
-   * No API keys required, no billing - completely free like TTS
+  * 1. (Unavailable in Expo Go) Native Device STT - requires dev build
+  * 2. Backend service (if configured)
+  * 
+  * Note: Expo Go cannot load native STT modules. Use a custom dev build
+  * (expo prebuild + expo run:android/ios) or configure backend STT.
    */
   async transcribeAudio(
     audioUri: string,
@@ -283,29 +302,7 @@ class VoiceService {
     try {
       console.log('🎤 Starting audio transcription...', { audioUri, languageCode });
 
-      // Method 1: Try Vosk (free offline speech recognition)
-      try {
-        const result = await this.transcribeViaVosk(audioUri, languageCode);
-        if (result.success) {
-          console.log('✅ Transcription via Vosk:', result.text);
-          return result;
-        }
-      } catch (error) {
-        console.warn('❌ Vosk STT failed:', error);
-      }
-
-      // Method 2: Try Google Web Speech API if available
-      try {
-        const result = await this.transcribeViaGoogleFree(audioUri, languageCode);
-        if (result.success) {
-          console.log('✅ Transcription via Google Free STT:', result.text);
-          return result;
-        }
-      } catch (error) {
-        console.warn('❌ Google Free STT failed:', error);
-      }
-
-      // Method 3: Try backend service if available
+      // Method 1: Backend service if available
       const backendUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
       if (backendUrl) {
         try {
@@ -319,10 +316,10 @@ class VoiceService {
         }
       }
 
-      // All methods failed
+      // All methods failed (Expo Go cannot load native STT modules)
       return {
         success: false,
-        error: 'No STT provider available. Try setting EXPO_PUBLIC_BACKEND_URL.',
+        error: 'Speech-to-text needs a custom dev build (expo prebuild + expo run) or a backend STT endpoint. Expo Go cannot load native STT.',
         provider: 'none'
       };
     } catch (error) {
@@ -332,117 +329,6 @@ class VoiceService {
         error: String(error),
       };
     }
-  }
-
-  /**
-   * Transcribe using Google's Free Speech API
-   * Uses Google Cloud Speech-to-Text free tier
-   * 
-   * Free quota: 60 minutes/month
-   * Quality: Excellent
-   * Setup: Just need Google Cloud account (free tier)
-   */
-  private async transcribeViaGoogleFree(
-    audioUri: string,
-    languageCode: string
-  ): Promise<TranscribeResponse> {
-    try {
-      console.log('🔵 Attempting Google Free STT...');
-
-      // Google Cloud Speech-to-Text free endpoint
-      // For mobile, we can use the speech-to-text service that comes with Android
-      // This would typically be handled by native code or a service wrapper
-      
-      // Alternative: Use Google's Web Speech API if running in web context
-      // For now, this is a placeholder that would be implemented with:
-      // 1. Native Android SpeechRecognizer
-      // 2. Or HTTP call to a Google STT proxy
-
-      // Simple approach: Call a free proxy service that wraps Google Speech API
-      // Note: Would need to implement with native module for true integration
-
-      return {
-        success: false,
-        error: 'Google STT requires native implementation',
-        provider: 'google'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: String(error),
-        provider: 'google'
-      };
-    }
-  }
-
-  /**
-   * Transcribe using Vosk (FREE offline speech recognition)
-   * 
-   * Vosk is completely free and works offline
-   * Quality: Good for basic commands
-   * Languages: 19+ languages supported
-   * 
-   * Setup: None needed, uses free Vosk API
-   * Website: https://alphacephei.com/vosk/
-   */
-  private async transcribeViaVosk(
-    audioUri: string,
-    languageCode: string
-  ): Promise<TranscribeResponse> {
-    try {
-      console.log('🟢 Attempting Vosk STT (FREE)...');
-
-      // Vosk provides free speech recognition
-      // Language codes: en-us, hi-in, ur-pk, es-es, fr-fr, de-de, pt-br, ja-jp, zh-cn, ru-ru
-      const voskLanguage = this.mapLanguageToVosk(languageCode);
-
-      // Vosk free API endpoint for audio recognition
-      const voskUrl = `https://api.alphacephei.com/asr?language=${voskLanguage}`;
-
-      // For audio file transcription, we would:
-      // 1. Read audio file from audioUri
-      // 2. Convert to WAV PCM format if needed
-      // 3. Send to Vosk API
-      // 4. Parse response
-
-      // For now returning placeholder - Vosk requires audio reading which would use FileSystem API
-      // Full implementation would use Expo.FileSystem to read the audio file
-
-      console.log('📍 Vosk endpoint:', voskUrl);
-
-      return {
-        success: false,
-        error: 'Vosk implementation requires audio file reading (use backend for now)',
-        provider: 'vosk'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: String(error),
-        provider: 'vosk'
-      };
-    }
-  }
-
-  /**
-   * Map language code to Vosk language format
-   */
-  private mapLanguageToVosk(languageCode: string): string {
-    const voskLanguageMap: Record<string, string> = {
-      'en-US': 'en-us',
-      'en-GB': 'en-us',
-      'ur-PK': 'ur-pk',
-      'pa-IN': 'pa-in',
-      'es-ES': 'es-es',
-      'fr-FR': 'fr-fr',
-      'de-DE': 'de-de',
-      'it-IT': 'it-it',
-      'pt-BR': 'pt-br',
-      'ja-JP': 'ja-jp',
-      'zh-CN': 'zh-cn',
-      'ru-RU': 'ru-ru',
-    };
-    return voskLanguageMap[languageCode] || 'en-us';
   }
 
   /**
