@@ -63,7 +63,7 @@ const extractJSONString = (text: string): string => {
 export const generateSurrogateResponse = async (
     message: string,
     history: string[],
-    imageBase64?: string
+    fileData?: { mimeType: string; base64: string }
 ): Promise<{
     text: string;
     tone: string;
@@ -94,6 +94,11 @@ Current Time: ${now.toLocaleString()}
 User Name: ${userName}
 Existing Events in DB: ${contextEvents || "None"}
 
+**CAPABILITIES:**
+- **Multimodal Integration**: You can view images, read PDFs, and **listen to audio messages**.
+- **Audio Handling**: If the user sends an audio file, you MUST internally transcribe it to understand the intent. Respond naturally to the spoken content.
+- **PDF Handling**: Review the content of attached PDF files to answer potential questions.
+
 **AGENTS & TOOLS:**
 1. **Schedule Agent**: Manage calendar.
    - Command: "create_event" | Params: title, time (e.g., "14:00"), date (YYYY-MM-DD), description.
@@ -107,8 +112,8 @@ Existing Events in DB: ${contextEvents || "None"}
       1. **Step 1: Identify Recipient**: You MUST have a valid email address. If the user only gives a name (e.g., "Bob"), you MUST ASK: "What is the email address for Bob?"
       2. **Step 2: Identify Context**: You MUST have a topic/context to write the email.
       3. **Step 3: Auto-Drafting**: **YOU MUST USE THE TOOL**. Do NOT just write the text in the response. You MUST call "activeAgent": "Email Agent" and providing the "command": "send_email" with the drafted content.
-      4. **Signature**: YOU MUST sign off the email body with: "Best regards,\n${userName}"
-     5. **Formatting**: Use '\\n' for newlines in the body.
+      4. **Signature**: YOU MUST sign off the email body with: "Best regards,n${userName}"
+     5. **Formatting**: Use '\n' for newlines in the body.
      6. **Final Response**: When the draft is ready, explicitly tell the user: "I've drafted the email below. You can edit the text directly in the box, then tap Send."
 4. **Search Agent**: Find info.
    - Command: "web_search" | Params: query.
@@ -142,28 +147,45 @@ Existing Events in DB: ${contextEvents || "None"}
 `;
 
     try {
-        const model = 'meta-llama/llama-3.3-70b-instruct:free'; // Using OpenRouter Model
+        const model = 'google/gemini-2.0-flash-exp:free'; // Using Gemini 2.0 Flash via OpenRouter for Multimodal Support
 
         const messages: any[] = [
             { role: "system", content: SYSTEM_INSTRUCTION }
         ];
 
         // Add history
-        // History format in this app is "Sender: Message", we need to parse it loosely or just dump it
-        // Better to just dump it as context if we don't want to parse fully
         if (history.length > 0) {
             messages.push({ role: "user", content: `Previous Context:\n${history.join('\n')}` });
         }
 
         // Current User Message
         const userContent: any[] = [{ type: "text", text: message }];
-        if (imageBase64) {
-            userContent.push({
-                type: "image_url",
-                image_url: {
-                    url: imageBase64 // OpenRouter/OpenAI accepts data:image/... base64 strings directly
-                }
-            });
+
+        if (fileData) {
+            console.log("Attaching File Data:", fileData.mimeType, "Length:", fileData.base64.length);
+            // Check if it is PDF or Image or Audio
+            if (fileData.mimeType === 'application/pdf') {
+                userContent.push({
+                    type: "image_url", // OpenRouter often reuses this field or generic 'file_url'
+                    image_url: {
+                        url: `data:${fileData.mimeType};base64,${fileData.base64}`
+                    }
+                });
+            } else if (fileData.mimeType.startsWith('image/')) {
+                userContent.push({
+                    type: "image_url",
+                    image_url: {
+                        url: `data:${fileData.mimeType};base64,${fileData.base64}`
+                    }
+                });
+            } else if (fileData.mimeType.startsWith('audio/')) {
+                userContent.push({
+                    type: "image_url", // Temporary fallback or check OpenRouter spec for 'audio_url'
+                    image_url: {
+                        url: `data:${fileData.mimeType};base64,${fileData.base64}`
+                    }
+                });
+            }
         }
 
         messages.push({ role: "user", content: userContent });
@@ -192,6 +214,7 @@ Existing Events in DB: ${contextEvents || "None"}
 
         const data = await response.json();
         const jsonText = data.choices[0].message.content;
+        console.log("Gemini Raw Response:", jsonText);
 
         if (!jsonText) throw new Error("Empty response from OpenRouter");
 

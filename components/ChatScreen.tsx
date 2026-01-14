@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TextInput, FlatList, Image, Pressable, KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Linking, ScrollView } from 'react-native';
-import { Send, Mic, MicOff, MoreVertical, Paperclip, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown, Camera } from 'lucide-react-native';
+import { Send, Mic, MicOff, MoreVertical, Paperclip, X, Smile, ArrowLeft, Calendar, FileText, ExternalLink, Clock, Copy, Mail, Edit2, Check, PlusCircle, CreditCard, Share2, Trash2, TrendingUp, TrendingDown, Camera, File as FileIcon, Play, Square } from 'lucide-react-native';
 import { Message, Sender, AgentType, ChatSession } from '../types';
 import { generateSurrogateResponse } from '../services/geminiService';
 import { db } from '../services/db';
 import * as Speech from 'expo-speech';
-import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+import { Audio } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import BackgroundWrapper from './BackgroundWrapper';
@@ -13,6 +15,13 @@ import GlassCard from './GlassCard';
 
 interface ChatScreenProps {
     sessionId: string;
+}
+
+interface AttachedFile {
+    uri: string;
+    name: string;
+    mimeType: string;
+    base64?: string;
 }
 
 // --- Sub-Component: Editable Email Widget (Styled) ---
@@ -130,7 +139,9 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [attachedImage, setAttachedImage] = useState<string | null>(null);
+    const [attachedFile, setAttachedFile] = useState<AttachedFile | null>(null);
+    const [recording, setRecording] = useState<Audio.Recording | null>(null);
+    const [isRecording, setIsRecording] = useState(false);
     const flatListRef = useRef<FlatList>(null);
     const insets = useSafeAreaInsets();
     const router = useRouter();
@@ -148,6 +159,15 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
         };
         loadSession();
     }, [sessionId]);
+
+    // Cleanup Audio on Unmount
+    useEffect(() => {
+        return () => {
+            if (recording) {
+                recording.stopAndUnloadAsync();
+            }
+        };
+    }, []);
 
     // Persist Messages
     useEffect(() => {
@@ -179,7 +199,7 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
     };
 
     const handleSend = async () => {
-        if (!input.trim() && !attachedImage) return;
+        if (!input.trim() && !attachedFile) return;
 
         const newUserMsg: Message = {
             id: Date.now().toString(),
@@ -190,12 +210,21 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
 
         setMessages(prev => [...prev, newUserMsg]);
         setInput('');
-        const imageToSend = attachedImage;
-        setAttachedImage(null);
+        const fileToSend = attachedFile;
+        setAttachedFile(null);
         setIsProcessing(true);
 
         const historyText = messages.map(m => `${m.sender}: ${m.text}`);
-        const aiResponse = await generateSurrogateResponse(input, historyText, imageToSend || undefined);
+
+        let fileDataPayload = undefined;
+        if (fileToSend && fileToSend.base64) {
+            fileDataPayload = {
+                mimeType: fileToSend.mimeType,
+                base64: fileToSend.base64
+            };
+        }
+
+        const aiResponse = await generateSurrogateResponse(input, historyText, fileDataPayload);
 
         setIsProcessing(false);
 
@@ -216,27 +245,84 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
     };
 
     const handleFileUpload = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            quality: 0.5,
-            base64: true,
-        });
+        console.log("Starting File Upload...");
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: '*/*',
+                copyToCacheDirectory: true
+            });
 
-        if (!result.canceled && result.assets[0].base64) {
-            setAttachedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+            console.log("DocumentPicker Result:", result.canceled ? "Canceled" : "Selected");
+            if (result.canceled) return;
+
+            const asset = result.assets[0];
+            console.log("Asset URI:", asset.uri);
+            console.log("Asset Mime:", asset.mimeType);
+            console.log("Asset Size:", asset.size);
+
+            if (asset.size && asset.size > 10 * 1024 * 1024) {
+                Alert.alert("File too large", "Please select a file smaller than 10MB.");
+                return;
+            }
+
+            const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: 'base64' });
+            console.log("Base64 Generated, Length:", base64.length);
+
+            setAttachedFile({
+                uri: asset.uri,
+                name: asset.name,
+                mimeType: asset.mimeType || 'application/octet-stream',
+                base64: base64
+            });
+        } catch (e: any) {
+            console.error("File Upload Error:", e);
+            Alert.alert("Error", `Failed to attach file: ${e.message}`);
         }
     };
 
-    const handleCamera = async () => {
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            quality: 0.5,
-            base64: true,
-        });
+    const handleVoiceToggle = async () => {
+        try {
+            if (recording) {
+                console.log("Stopping Recording...");
+                // Stop Recording
+                setIsRecording(false);
+                await recording.stopAndUnloadAsync();
+                const uri = recording.getURI();
+                console.log("Recording URI:", uri);
+                setRecording(null);
 
-        if (!result.canceled && result.assets[0].base64) {
-            setAttachedImage(`data:image/jpeg;base64,${result.assets[0].base64}`);
+                if (uri) {
+                    const base64 = await FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
+                    console.log("Audio Base64 Generated, Length:", base64.length);
+                    setAttachedFile({
+                        uri: uri,
+                        name: "voice_note.m4a",
+                        mimeType: "audio/m4a",
+                        base64: base64
+                    });
+                }
+            } else {
+                console.log("Starting Recording...");
+                // Start Recording
+                const perm = await Audio.requestPermissionsAsync();
+                console.log("Audio Permission:", perm.status);
+                if (perm.status !== 'granted') return;
+
+                await Audio.setAudioModeAsync({
+                    allowsRecordingIOS: true,
+                    playsInSilentModeIOS: true,
+                });
+
+                const { recording } = await Audio.Recording.createAsync(
+                    Audio.RecordingOptionsPresets.HIGH_QUALITY
+                );
+
+                setRecording(recording);
+                setIsRecording(true);
+            }
+        } catch (err: any) {
+            console.error("Voice Error:", err);
+            Alert.alert('Failed to record voice', err.message);
         }
     }
 
@@ -548,12 +634,23 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                         </View>
                     )}
 
-                    {attachedImage && (
+                    {/* File Preview */}
+                    {attachedFile && (
                         <View className="bg-black/80 p-3 flex-row justify-center relative border-t border-glass-border">
-                            <View>
-                                <Image source={{ uri: attachedImage }} className="h-40 w-40 rounded-xl border border-glass-border" resizeMode="cover" />
-                                <Pressable onPress={() => setAttachedImage(null)} className="absolute -top-2 -right-2 bg-red-600 rounded-full p-1 shadow-lg">
-                                    <X size={16} color="white" />
+                            <View className="bg-white/10 p-3 rounded-xl border border-glass-border flex-row items-center gap-3">
+                                {attachedFile.mimeType.startsWith('image/') ? (
+                                    <Image source={{ uri: attachedFile.uri }} className="h-12 w-12 rounded-lg" />
+                                ) : (
+                                    <View className="h-12 w-12 bg-neon-primary/20 items-center justify-center rounded-lg">
+                                        <FileIcon size={24} color="#8B5CF6" />
+                                    </View>
+                                )}
+                                <View>
+                                    <Text className="text-white text-xs font-bold max-w-[150px]" numberOfLines={1}>{attachedFile.name}</Text>
+                                    <Text className="text-gray-400 text-[10px]">{attachedFile.mimeType}</Text>
+                                </View>
+                                <Pressable onPress={() => setAttachedFile(null)} className="bg-red-600 rounded-full p-1 ml-2">
+                                    <X size={12} color="white" />
                                 </Pressable>
                             </View>
                         </View>
@@ -562,32 +659,29 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ sessionId }) => {
                     {/* Input */}
                     <View className="p-2 flex-row items-end gap-2 mb-1">
                         <View className="flex-1 bg-white/5 rounded-[24px] flex-row items-center border border-glass-border px-1.5 py-1 min-h-[48px] backdrop-blur-xl">
-                            <Pressable className="p-2">
-                                <Smile size={24} color="rgba(255,255,255,0.4)" />
-                            </Pressable>
                             <TextInput
                                 value={input}
                                 onChangeText={setInput}
-                                placeholder={attachedImage ? "Add caption..." : "Transmit message..."}
+                                placeholder={attachedFile ? "Add caption..." : "Transmit message..."}
                                 placeholderTextColor="rgba(255,255,255,0.3)"
-                                className="flex-1 text-white px-2 py-2 max-h-32 text-base"
+                                className="flex-1 text-white px-3 py-2 max-h-32 text-base"
                                 multiline
                             />
                             <Pressable onPress={handleFileUpload} className="p-2 -rotate-45 active:opacity-70">
                                 <Paperclip size={20} color="rgba(255,255,255,0.4)" />
                             </Pressable>
-                            {(input.length > 0 || attachedImage) ? (
+                            {(input.length > 0 || attachedFile) && (
                                 <Pressable onPress={handleSend} className="p-2 mr-1 bg-neon-primary rounded-full shadow-[0_0_15px_rgba(139,92,246,0.5)]">
                                     <Send size={18} color="white" />
                                 </Pressable>
-                            ) : (
-                                <Pressable onPress={handleCamera} className="p-2 mr-1">
-                                    <Camera size={22} color="rgba(255,255,255,0.4)" />
-                                </Pressable>
                             )}
                         </View>
-                        <Pressable className="w-12 h-12 rounded-full bg-white/5 border border-glass-border items-center justify-center active:bg-neon-primary/20">
-                            <Mic size={24} color="#8B5CF6" />
+
+                        <Pressable
+                            onPress={handleVoiceToggle}
+                            className={`w-12 h-12 rounded-full border border-glass-border items-center justify-center active:bg-neon-primary/20 ${isRecording ? 'bg-red-500/20 border-red-500 animate-pulse' : 'bg-white/5'}`}
+                        >
+                            {isRecording ? <Square size={20} color="#ef4444" fill="#ef4444" /> : <Mic size={24} color="#8B5CF6" />}
                         </Pressable>
                     </View>
                 </KeyboardAvoidingView>

@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.saad.aisurrogatemobile"
+      "bundleIdentifier": "com.saad.aisurrogatemobile",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Allow AI Surrogate to access your microphone for voice chats."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,6 +27,11 @@
       },
       "package": "com.saad.aisurrogatemobile",
       "edgeToEdgeEnabled": true,
+      "permissions": [
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
         {
